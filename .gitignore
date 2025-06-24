@@ -1,0 +1,7 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+*.env  # <--- ADD THIS LINE
+db.sqlite3 # <--- ADD THIS LINE (if you don't want to track your local DB)
