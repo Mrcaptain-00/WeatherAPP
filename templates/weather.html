@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherSphere - Modern Weather App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #10b981;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            color: var(--dark);
+        }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .weather-icon {
+            font-size: 5rem;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        .temperature {
+            font-size: 4rem;
+            font-weight: 300;
+            position: relative;
+        }
+
+        .temperature::after {
+            content: "°";
+            position: absolute;
+            top: 0;
+            right: -20px;
+        }
+
+        .search-input {
+            border: none;
+            outline: none;
+            padding: 15px 20px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: var(--primary);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: var(--secondary);
+        }
+
+        .forecast-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 100px;
+        }
+
+        .rain-animation {
+            animation: rain 1s linear infinite;
+            position: relative;
+        }
+
+        @keyframes rain {
+            0% { background-position: 0 0; }
+            100% { background-position: -20px 20px; }
+        }
+
+        .sun-animation {
+            animation: sun 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes sun {
+            0% { box-shadow: 0 0 10px #fde047; }
+            100% { box-shadow: 0 0 40px #fcd34d; }
+        }
+
+        .cloud-animation {
+            animation: cloud 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes cloud {
+            0% { transform: translateX(-5px); }
+            100% { transform: translateX(5px); }
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: var(--primary);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .day-night-indicator {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+        }
+
+        .day {
+            background: linear-gradient(45deg, #fcd34d, #fbbf24);
+        }
+
+        .night {
+            background: linear-gradient(45deg, #1e40af, #1e3a8a);
+        }
+
+        .snow-animation {
+            animation: snow 5s linear infinite;
+        }
+
+        @keyframes snow {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(20px); }
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-weight: 500;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body class="py-10 px-4">
+    <div class="container mx-auto max-w-6xl">
+        <header class="text-center mb-12 relative">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-2">WeatherSphere</h1>
+            <p class="text-lg text-gray-600">Your gateway to the world's weather</p>
+            <div class="day-night-indicator day" id="dayNightIndicator"></div>
+        </header>
+
+        <div class="flex justify-center mb-12 relative">
+            <div class="relative w-full max-w-xl">
+                <input 
+                    type="text" 
+                    id="locationInput" 
+                    class="search-input" 
+                    placeholder="Search by city, state or zip code..."
+                    autocomplete="off"
+                >
+                <button id="searchBtn" class="search-btn">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="weather-card p-8 mb-12 text-center" id="mainWeatherCard">
+            <div class="flex flex-col items-center justify-center py-8">
+                <div class="loader" id="loader"></div>
+                <div id="weatherContent" class="hidden">
+                    <h2 class="text-3xl font-semibold mb-2" id="location">New York, NY</h2>
+                    <div class="flex items-center justify-center mb-4">
+                        <span class="text-gray-600 mr-2" id="date"></span>
+                        <span class="text-gray-600" id="time"></span>
+                    </div>
+                    
+                    <div class="flex justify-center items-center mb-6">
+                        <div class="relative">
+                            <i class="fas weather-icon" id="weatherIcon"></i>
+                        </div>
+                    </div>
+                    
+                    <p class="text-6xl font-light temperature mb-4" id="temperature">72</p>
+                    
+                    <div class="flex justify-center items-center gap-4 mb-6">
+                        <div>
+                            <p class="text-gray-600">Feels Like</p>
+                            <p class="text-xl font-medium" id="feelsLike">74°</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600">Humidity</p>
+                            <p class="text-xl font-medium" id="humidity">65%</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600">Wind</p>
+                            <p class="text-xl font-medium" id="windSpeed">8 mph</p>
+                        </div>
+                    </div>
+                    
+                    <p class="text-xl" id="weatherDescription">Sunny</p>
+                    <p class="error-message hidden" id="errorMessage"></p>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-2xl font-semibold mb-6">Hourly Forecast</h3>
+        <div class="overflow-x-auto mb-12">
+            <div class="flex space-x-4 pb-4" id="hourlyForecast">
+                <div class="forecast-item text-center">
+                    <div class="text-sm font-medium">Now</div>
+                    <i class="fas fa-sun text-3xl my-2 text-yellow-400"></i>
+                    <div class="font-bold">72°</div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="text-2xl font-semibold mb-6">5-Day Forecast</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12" id="dailyForecast">
+            <div class="weather-card p-4 text-center">
+                <div class="text-lg font-medium">Mon</div>
+                <i class="fas fa-sun text-4xl my-4 text-yellow-400"></i>
+                <div class="flex justify-evenly w-full">
+                    <span class="font-bold">75°</span>
+                    <span class="text-gray-500">63°</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="weather-card p-6">
+                <h4 class="text-xl font-medium mb-4">UV Index</h4>
+                <div class="flex items-center">
+                    <div class="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mr-4">
+                        <span class="text-white text-xl font-bold" id="uvIndex">5</span>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-600">Moderate</p>
+                        <p class="text-sm">Some protection needed</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="weather-card p-6">
+                <h4 class="text-xl font-medium mb-4">Visibility</h4>
+                <div class="flex items-center">
+                    <i class="fas fa-eye text-4xl mr-4 text-blue-500"></i>
+                    <div>
+                        <p class="text-2xl font-medium" id="visibility">10 <span class="text-sm">miles</span></p>
+                        <p class="text-sm text-gray-600">Excellent visibility</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="weather-card p-6">
+                <h4 class="text-xl font-medium mb-4">Pressure</h4>
+                <div class="flex items-center">
+                    <i class="fas fa-tachometer-alt text-4xl mr-4 text-purple-500"></i>
+                    <div>
+                        <p class="text-2xl font-medium" id="pressure">1012 <span class="text-sm">hPa</span></p>
+                        <p class="text-sm text-gray-600">Normal pressure</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const elements = {
+            loader: document.getElementById('loader'),
+            weatherContent: document.getElementById('weatherContent'),
+            location: document.getElementById('location'),
+            temperature: document.getElementById('temperature'),
+            feelsLike: document.getElementById('feelsLike'),
+            humidity: document.getElementById('humidity'),
+            windSpeed: document.getElementById('windSpeed'),
+            weatherDescription: document.getElementById('weatherDescription'),
+            weatherIcon: document.getElementById('weatherIcon'),
+            dayNightIndicator: document.getElementById('dayNightIndicator'),
+            uvIndex: document.getElementById('uvIndex'),
+            visibility: document.getElementById('visibility'),
+            pressure: document.getElementById('pressure'),
+            hourlyForecast: document.getElementById('hourlyForecast'),
+            dailyForecast: document.getElementById('dailyForecast'),
+            locationInput: document.getElementById('locationInput'),
+            searchBtn: document.getElementById('searchBtn'),
+            date: document.getElementById('date'),
+            time: document.getElementById('time'),
+            errorMessage: document.getElementById('errorMessage')
+        };
+
+        // Icon Mapping
+        const iconMap = {
+            '113': 'fa-sun', '116': 'fa-cloud-sun', '119': 'fa-cloud', '122': 'fa-cloud',
+            '143': 'fa-smog', '176': 'fa-cloud-rain', '179': 'fa-snowflake', '182': 'fa-snowflake',
+            '185': 'fa-snowflake', '200': 'fa-bolt', '227': 'fa-wind', '230': 'fa-snowflake',
+            '248': 'fa-smog', '263': 'fa-cloud-drizzle', '266': 'fa-cloud-drizzle',
+            '281': 'fa-cloud-drizzle', '284': 'fa-cloud-drizzle', '293': 'fa-cloud-rain',
+            '299': 'fa-cloud-showers-heavy', '302': 'fa-cloud-showers-heavy', '305': 'fa-cloud-showers-heavy',
+            '311': 'fa-snowflake', '314': 'fa-snowflake', '317': 'fa-snowflake', '320': 'fa-snowflake',
+            '323': 'fa-snowflake', '326': 'fa-snowflake', '329': 'fa-snowflake', '332': 'fa-snowflake',
+            '335': 'fa-snowflake', '338': 'fa-snowflake', '350': 'fa-snowflake', '353': 'fa-cloud-rain',
+            '356': 'fa-cloud-showers-heavy', '359': 'fa-cloud-showers-heavy', '362': 'fa-snowflake',
+            '365': 'fa-snowflake', '368': 'fa-snowflake', '371': 'fa-snowflake', '374': 'fa-snowflake',
+            '377': 'fa-snowflake', '386': 'fa-bolt', '389': 'fa-bolt', '392': 'fa-bolt', '395': 'fa-snowflake'
+        };
+
+        // Helper Functions
+        const formatDate = () => new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const formatTime = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' });
+        const getWeatherIconClass = (iconUrl) => iconMap[iconUrl?.split('/').pop().split('.')[0]] || 'fa-question-circle';
+        const getIconClass = (condition) => {
+            const c = condition.toLowerCase();
+            if (c.includes('rain')) return 'rain-animation text-blue-400';
+            if (c.includes('cloud')) return 'cloud-animation text-gray-400';
+            if (c.includes('sun') || c.includes('clear')) return 'sun-animation text-yellow-400';
+            if (c.includes('snow') || c.includes('sleet')) return 'snow-animation text-blue-200';
+            if (c.includes('storm') || c.includes('thunder')) return 'text-purple-500';
+            if (c.includes('fog') || c.includes('mist') || c.includes('haze')) return 'text-gray-500';
+            return 'text-gray-500';
+        };
+
+        // Update UI Functions
+        const updateDateTime = () => {
+            elements.date.textContent = formatDate();
+            elements.time.textContent = formatTime();
+        };
+
+        const updateWeatherUI = (data) => {
+            elements.loader.style.display = 'none';
+            elements.weatherContent.classList.remove('hidden');
+            elements.errorMessage.classList.add('hidden');
+            
+            elements.location.textContent = data.location;
+            elements.temperature.textContent = Math.round(data.current.temp);
+            elements.feelsLike.textContent = `${Math.round(data.current.feels_like)}°`;
+            elements.humidity.textContent = `${data.current.humidity}%`;
+            elements.windSpeed.textContent = `${data.current.wind_speed} kph`;
+            elements.weatherDescription.textContent = data.current.description;
+            
+            elements.weatherIcon.className = `fas weather-icon ${getWeatherIconClass(data.current.icon)} ${data.current.iconClass}`;
+            
+            elements.dayNightIndicator.className = 'day-night-indicator ' + (data.current.isDay ? 'day' : 'night');
+            elements.uvIndex.textContent = data.current.uvIndex;
+            elements.visibility.textContent = data.current.visibility;
+            elements.pressure.textContent = data.current.pressure;
+        };
+
+        const updateHourlyForecast = (hourlyData) => {
+            elements.hourlyForecast.innerHTML = '';
+            hourlyData.forEach(hour => {
+                const item = document.createElement('div');
+                item.className = 'forecast-item text-center';
+                item.innerHTML = `
+                    <div class="text-sm font-medium">${hour.time}</div>
+                    <i class="fas ${getWeatherIconClass(hour.icon)} text-3xl my-2 ${hour.iconClass}"></i>
+                    <div class="font-bold">${Math.round(hour.temp)}°</div>
+                `;
+                elements.hourlyForecast.appendChild(item);
+            });
+        };
+        
+        const updateDailyForecast = (dailyData) => {
+            elements.dailyForecast.innerHTML = '';
+            dailyData.forEach(day => {
+                const item = document.createElement('div');
+                item.className = 'weather-card p-4 text-center';
+                item.innerHTML = `
+                    <div class="text-lg font-medium">${day.day}</div>
+                    <i class="fas ${getWeatherIconClass(day.icon)} text-4xl my-4 ${day.iconClass}"></i>
+                    <div class="flex justify-evenly w-full">
+                        <span class="font-bold">${Math.round(day.high)}°</span>
+                        <span class="text-gray-500">${Math.round(day.low)}°</span>
+                    </div>
+                `;
+                elements.dailyForecast.appendChild(item);
+            });
+        };
+        // Initialize Weather Data
+        const initWeatherData = (data) => {
+            updateWeatherUI(data);
+            updateHourlyForecast(data.hourly);
+            updateDailyForecast(data.daily);
+        };
+        // Fetch Weather Data
+        const fetchWeatherData = async (city) => {
+            try {
+                elements.loader.style.display = 'block';
+                elements.weatherContent.classList.add('hidden');
+                elements.errorMessage.classList.add('hidden');
+                
+                const response = await fetch(`/api/weather/?city=${encodeURIComponent(city)}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to fetch weather data');
+                }
+                
+                const data = await response.json();
+                initWeatherData(data);
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                elements.errorMessage.textContent = `Error: ${error.message}`;
+                elements.errorMessage.classList.remove('hidden');
+                elements.loader.style.display = 'none';
+                elements.weatherContent.classList.remove('hidden');
+            }
+        };
+
+        // Event Listeners
+        elements.searchBtn.addEventListener('click', () => {
+            const city = elements.locationInput.value.trim();
+            if (city) {
+                fetchWeatherData(city);
+            } else {
+                elements.errorMessage.textContent = 'Please enter a city name';
+                elements.errorMessage.classList.remove('hidden');
+            }
+        });
+        elements.locationInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const city = elements.locationInput.value.trim();
+                if (city) {
+                    fetchWeatherData(city);
+                } else {
+                    elements.errorMessage.textContent = 'Please enter a city name';
+                    elements.errorMessage.classList.remove('hidden');
+                }
+            }
+        });
+        // Initialize App
+        updateDateTime();
+        setInterval(updateDateTime, 60000); // Update time every minute
+        fetchWeatherData('New York'); // Default city
+    </script>
+</body>
+</html>
